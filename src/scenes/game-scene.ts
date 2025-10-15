@@ -48,7 +48,7 @@ export class GameScene extends Phaser.Scene {
     this.startText.setOrigin(0.5)
 
     // === Control ===
-    this.input.on('pointerdown', (pointer: Phaser.Input.Pointer) => this.flap(pointer))
+    this.input.on('pointerdown', () => this.flap())
     this.input.keyboard?.on('keydown-SPACE', this.flap, this)
 
     // === Pipes ===
@@ -100,7 +100,7 @@ export class GameScene extends Phaser.Scene {
     this.difficultyText.setText(`Difficulty: ${diffLabel}`)
   }
 
-  flap(pointer?: Phaser.Input.Pointer) {
+  flap() {
     if (this.uiClicked) return
 
     if (!this.gameStarted) {
