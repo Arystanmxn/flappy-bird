@@ -12,4 +12,10 @@ export const pipesSkins: TPipesSkin[] = [
     height: 150,
     width: 70,
   },
+  {
+    name: 'appartments',
+    image: 'assets/pipes-skins/appartments.svg',
+    height: 150,
+    width: 70,
+  },
 ]

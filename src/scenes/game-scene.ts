@@ -148,7 +148,7 @@ export class GameScene extends Phaser.Scene {
 
     // Start pipe spawn
     this.timer = this.time.addEvent({
-      delay: 1800,
+      delay: 2800,
       callback: this.spawnPipes,
       callbackScope: this,
       loop: true,
@@ -159,6 +159,8 @@ export class GameScene extends Phaser.Scene {
   }
 
   spawnPipes() {
+    const speed = this.settings[this.difficulty].speed
+
     const { width, height } = this.scale
     const gap = this.settings[this.difficulty].gap
     const minY = height * 0.2
@@ -168,7 +170,10 @@ export class GameScene extends Phaser.Scene {
     const pipeTexture = this.pipeSkin.name
 
     const topHeight = gapCenterY - gap / 2
+    const bottomHeight = height - (gapCenterY + gap / 2)
+    const bottomY = gapCenterY + gap / 2 + bottomHeight / 2
 
+    // === Верхняя труба (перевернутая) ===
     const topPipe = this.add.tileSprite(
       width + pipeWidth / 2,
       topHeight / 2,
@@ -177,15 +182,14 @@ export class GameScene extends Phaser.Scene {
       pipeTexture,
     )
     topPipe.setOrigin(0.5)
+    topPipe.setFlipY(true)
+    topPipe.setFlipX(true)
     this.physics.add.existing(topPipe)
     const topBody = topPipe.body as Phaser.Physics.Arcade.Body
     topBody.setImmovable(true)
     topBody.setAllowGravity(false)
-    this.pipes.add(topPipe)
 
-    const bottomHeight = height - (gapCenterY + gap / 2)
-    const bottomY = gapCenterY + gap / 2 + bottomHeight / 2
-
+    // === Нижняя труба ===
     const bottomPipe = this.add.tileSprite(
       width + pipeWidth / 2,
       bottomY,
@@ -198,19 +202,21 @@ export class GameScene extends Phaser.Scene {
     const bottomBody = bottomPipe.body as Phaser.Physics.Arcade.Body
     bottomBody.setImmovable(true)
     bottomBody.setAllowGravity(false)
-    this.pipes.add(bottomPipe)
 
-    // === Повтор текстуры ===
-    const textureBaseHeight = this.pipeSkin.height
-    topPipe.setTileScale(1, topHeight / textureBaseHeight)
-    bottomPipe.setTileScale(1, bottomHeight / textureBaseHeight)
+    // === Добавляем трубы в группу ===
+    this.pipes.addMultiple([topPipe, bottomPipe])
 
-    // === Зона для очков ===
+    // === Двигаем трубы влево ===
+    topBody.setVelocityX(speed)
+    bottomBody.setVelocityX(speed)
+
+    // === Зона для очков (движется вместе с трубами) ===
     const scoreZone = this.add.zone(width + pipeWidth, gapCenterY, 5, gap)
     this.physics.world.enable(scoreZone)
     const zoneBody = scoreZone.body as Phaser.Physics.Arcade.Body
     zoneBody.setAllowGravity(false)
     zoneBody.setImmovable(true)
+    zoneBody.setVelocityX(speed)
 
     this.scoreZones.push(scoreZone)
 
@@ -221,17 +227,17 @@ export class GameScene extends Phaser.Scene {
       scoreZone,
       () => {
         if (!scored) {
+          scored = true
           this.score++
           this.scoreText.setText(this.score.toString())
-          scored = true
         }
       },
       undefined,
       this,
     )
 
-    // === Удаление за экраном ===
-    this.time.delayedCall(6000, () => {
+    // === Удаляем объекты за экраном ===
+    this.time.delayedCall(8000, () => {
       topPipe.destroy()
       bottomPipe.destroy()
       scoreZone.destroy()
@@ -239,9 +245,6 @@ export class GameScene extends Phaser.Scene {
   }
 
   update() {
-    const speed = this.settings[this.difficulty].speed
-    const delta = this.game.loop.delta / 1000
-
     const { height } = this.scale
 
     if (this.gameEnded) {
@@ -270,24 +273,6 @@ export class GameScene extends Phaser.Scene {
 
     const angle = Phaser.Math.Clamp(this.birdBody.velocity.y * 0.1, -30, 90)
     this.bird.angle = angle
-
-    // --- pipe movement ---
-    this.pipes.getChildren().forEach((pipe: any) => {
-      const body = pipe.body as Phaser.Physics.Arcade.Body
-      if (body) {
-        body.x += speed * delta
-        pipe.x = body.x + pipe.displayWidth / 2
-      }
-    })
-
-    // --- zone movement ---
-    this.scoreZones.forEach((zone) => {
-      const body = zone.body as Phaser.Physics.Arcade.Body
-      if (body) {
-        body.x += speed * delta
-        zone.x = body.x + zone.displayWidth / 2
-      }
-    })
 
     this.scoreZones = this.scoreZones.filter((zone) => {
       if (zone.x + zone.width < 0) {
