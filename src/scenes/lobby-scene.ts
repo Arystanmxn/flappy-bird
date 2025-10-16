@@ -7,7 +7,7 @@ export class LobbyScene extends Phaser.Scene {
   private selectedPipeSkin: string = 'soap'
   private skinFrames: Phaser.GameObjects.Rectangle[] = []
   private scrollArea!: Phaser.GameObjects.Container
-  private activeTab: 'bird' | 'pipe' = 'bird'
+  //   private activeTab: 'bird' | 'pipe' = 'bird'
 
   constructor() {
     super('LobbyScene')
@@ -66,14 +66,14 @@ export class LobbyScene extends Phaser.Scene {
     this.renderSkins('bird')
 
     birdTab.on('pointerdown', () => {
-      this.activeTab = 'bird'
+      //   this.activeTab = 'bird'
       birdTab.setColor('#ffff00')
       pipeTab.setColor('#ffffff')
       this.renderSkins('bird')
     })
 
     pipeTab.on('pointerdown', () => {
-      this.activeTab = 'pipe'
+      //   this.activeTab = 'pipe'
       birdTab.setColor('#ffffff')
       pipeTab.setColor('#ffff00')
       this.renderSkins('pipe')
