@@ -1,17 +1,23 @@
 import Phaser from 'phaser'
+import { birdSkins, type TBirdSkin } from '../consts/bird-skins.consts'
+import { pipesSkins, type TPipesSkin } from '../consts/pipes-skins.consts'
 
 export class GameScene extends Phaser.Scene {
-  private bird!: Phaser.GameObjects.Rectangle
+  private bird!: Phaser.GameObjects.Sprite
   private birdBody!: Phaser.Physics.Arcade.Body
+  private birdSkin!: TBirdSkin
   private pipes!: Phaser.Physics.Arcade.Group
   private timer!: Phaser.Time.TimerEvent
   private scoreText!: Phaser.GameObjects.Text
   private startText!: Phaser.GameObjects.Text
   private scoreZones: Phaser.GameObjects.Zone[] = []
   private difficultyText!: Phaser.GameObjects.Text
+  private pipeSkin!: TPipesSkin
+  private selectedPipeSkin = 'soap'
   private score = 0
   private gameStarted = false
   private gameEnded = false
+  private selectedSkin = 'uzbekistan'
 
   // === Settings ===
   private difficulty: 'easy' | 'medium' | 'hard' = 'medium'
@@ -27,12 +33,35 @@ export class GameScene extends Phaser.Scene {
     super('GameScene')
   }
 
+  init(data: { skin?: string; pipe?: string }) {
+    if (data.skin) {
+      this.selectedSkin = data.skin
+      this.birdSkin = birdSkins.find((skin) => skin.name === this.selectedSkin)! as TBirdSkin
+    }
+    if (data.pipe) {
+      this.selectedPipeSkin = data.pipe
+      this.pipeSkin = pipesSkins.find((skin) => skin.name === this.selectedPipeSkin)! as TPipesSkin
+    }
+  }
+
+  preload() {
+    birdSkins.forEach((skin: { name: string; image: string }) => {
+      this.load.image(skin.name, skin.image)
+    })
+
+    pipesSkins.forEach((skin: { name: string; image: string }) => {
+      this.load.image(skin.name, skin.image)
+    })
+  }
+
   create() {
     const { width, height } = this.scale
 
     // === Bird ===
-    this.bird = this.add.rectangle(100, 300, 30, 30, 0xffcc00)
-    this.bird.setStrokeStyle(3, 0xff8800)
+    // this.bird = this.add.rectangle(100, 300, 30, 30, 0xffcc00)
+    this.bird = this.add.sprite(100, 300, this.birdSkin.name)
+    this.bird.setDisplaySize(this.birdSkin.displayWidth * 2, this.birdSkin.displayHeight * 2)
+    // this.bird.setStrokeStyle(3, 0xff8800)
     this.physics.add.existing(this.bird)
     this.birdBody = this.bird.body as Phaser.Physics.Arcade.Body
     this.birdBody.setCollideWorldBounds(false)
@@ -135,26 +164,48 @@ export class GameScene extends Phaser.Scene {
     const minY = height * 0.2
     const maxY = height * 0.8
     const gapCenterY = Phaser.Math.Between(minY, maxY)
-    const pipeWidth = 60
+    const pipeWidth = this.pipeSkin.width
+    const pipeTexture = this.pipeSkin.name
 
-    // === Top Pipe ===
     const topHeight = gapCenterY - gap / 2
-    const topPipe = this.physics.add.image(width + pipeWidth / 2, topHeight / 2, 'pipe')
-    topPipe.setDisplaySize(pipeWidth, topHeight)
-    topPipe.setImmovable(true)
-    topPipe.body.setAllowGravity(false)
 
-    // === Bottom Pipe ===
+    const topPipe = this.add.tileSprite(
+      width + pipeWidth / 2,
+      topHeight / 2,
+      pipeWidth,
+      topHeight,
+      pipeTexture,
+    )
+    topPipe.setOrigin(0.5)
+    this.physics.add.existing(topPipe)
+    const topBody = topPipe.body as Phaser.Physics.Arcade.Body
+    topBody.setImmovable(true)
+    topBody.setAllowGravity(false)
+    this.pipes.add(topPipe)
+
     const bottomHeight = height - (gapCenterY + gap / 2)
     const bottomY = gapCenterY + gap / 2 + bottomHeight / 2
-    const bottomPipe = this.physics.add.image(width + pipeWidth / 2, bottomY, 'pipe')
-    bottomPipe.setDisplaySize(pipeWidth, bottomHeight)
-    bottomPipe.setImmovable(true)
-    bottomPipe.body.setAllowGravity(false)
-    this.pipes.add(topPipe)
+
+    const bottomPipe = this.add.tileSprite(
+      width + pipeWidth / 2,
+      bottomY,
+      pipeWidth,
+      bottomHeight,
+      pipeTexture,
+    )
+    bottomPipe.setOrigin(0.5)
+    this.physics.add.existing(bottomPipe)
+    const bottomBody = bottomPipe.body as Phaser.Physics.Arcade.Body
+    bottomBody.setImmovable(true)
+    bottomBody.setAllowGravity(false)
     this.pipes.add(bottomPipe)
 
-    // === Score Zone ===
+    // === Повтор текстуры ===
+    const textureBaseHeight = this.pipeSkin.height
+    topPipe.setTileScale(1, topHeight / textureBaseHeight)
+    bottomPipe.setTileScale(1, bottomHeight / textureBaseHeight)
+
+    // === Зона для очков ===
     const scoreZone = this.add.zone(width + pipeWidth, gapCenterY, 5, gap)
     this.physics.world.enable(scoreZone)
     const zoneBody = scoreZone.body as Phaser.Physics.Arcade.Body
@@ -163,6 +214,7 @@ export class GameScene extends Phaser.Scene {
 
     this.scoreZones.push(scoreZone)
 
+    // === Счётчик ===
     let scored = false
     this.physics.add.overlap(
       this.bird,
@@ -178,7 +230,7 @@ export class GameScene extends Phaser.Scene {
       this,
     )
 
-    // Remove objects off the screen
+    // === Удаление за экраном ===
     this.time.delayedCall(6000, () => {
       topPipe.destroy()
       bottomPipe.destroy()
@@ -257,7 +309,7 @@ export class GameScene extends Phaser.Scene {
     this.pipes.setVelocityX(0)
     const { width, height } = this.scale
 
-    // Texts
+    // --- GAME OVER ---
     this.add
       .text(width / 2, height / 2 - 40, 'GAME OVER!', {
         fontSize: `${Math.round(height / 10)}px`,
@@ -267,6 +319,7 @@ export class GameScene extends Phaser.Scene {
         strokeThickness: 6,
       })
       .setOrigin(0.5)
+      .setDepth(1000)
 
     this.add
       .text(width / 2, height / 2 + 20, `Score: ${this.score}`, {
@@ -277,6 +330,7 @@ export class GameScene extends Phaser.Scene {
         strokeThickness: 4,
       })
       .setOrigin(0.5)
+      .setDepth(1000)
 
     this.add
       .text(width / 2, height / 2 + 80, 'Press SPACE or CLICK to restart', {
@@ -284,6 +338,23 @@ export class GameScene extends Phaser.Scene {
         color: '#ffffff',
       })
       .setOrigin(0.5)
+      .setDepth(1000)
+
+    // --- BACK TO LOBBY BUTTON ---
+    const backButton = this.add
+      .text(width / 2, height / 2 + 140, '← Back to Lobby', {
+        fontSize: `${Math.round(height / 30)}px`,
+        backgroundColor: '#00000055',
+        padding: { x: 20, y: 10 },
+        color: '#ffffff',
+      })
+      .setOrigin(0.5)
+      .setInteractive({ useHandCursor: true })
+      .setDepth(1000)
+
+    backButton.on('pointerdown', () => {
+      this.scene.start('LobbyScene')
+    })
   }
 
   restartGame() {

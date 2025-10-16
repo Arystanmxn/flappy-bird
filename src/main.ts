@@ -1,4 +1,5 @@
 import Phaser from 'phaser'
+import { LobbyScene } from './scenes/lobby-scene'
 import { GameScene } from './scenes/game-scene'
 import './style.css'
 
@@ -13,12 +14,9 @@ const config: Phaser.Types.Core.GameConfig = {
   },
   physics: {
     default: 'arcade',
-    arcade: {
-      gravity: { y: 0, x: 0 },
-      debug: false,
-    },
+    arcade: { gravity: { x: 0, y: 0 }, debug: false },
   },
-  scene: [GameScene],
+  scene: [LobbyScene, GameScene],
 }
 
 const game = new Phaser.Game(config)
